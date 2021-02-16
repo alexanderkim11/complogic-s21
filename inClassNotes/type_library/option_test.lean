@@ -1,195 +1,283 @@
-/-
-The nat type in Lean is defined just as it
-is in our nat.lean file, so we just use Lean's
-definition here. For reference, here's Lean's
-definition.
+import .option
 
-inductive nat : Type
-| zero : nat
-| succ : nat → nat 
-
-That's it. To fully understand how this
-definition produces a set of terms that
-we can view interpret as representing
-natural numbers, you need a few facts:
-
-(1) Constructors are *disjoint*. This 
-means that terms built using different
-constructors are never equal.
-
-(2) Constructors are *injective*. This
-means that even if you use the same
-contructor, as long as you provide
-different argument values, you will
-always get terms that are not equal.
-
-(3) The values of a type include all
-values obtainable by any finite number
-of applications of its constructors.
--/
-
-#print nat
+namespace hidden 
 
 /-
-The key to writing functions that take nat
-arguments is, as usual, case analysis. If
-we're given a natural number (term of type
-ℕ), n, we first determine which constructor
-was used to create it (zero or succ), and if
-it was succ, then what one-smaller nat value
-succ was applied to to produce our argument.
+Every function in Lean must be total.
+That is, there has to be an answer for
+*all* values of the argument type.
+
+Examples: 
+
+    Total function, f, from bool to nat
+    ff --> 0
+    tt --> 1
+
+    Partial function, p, from bool to nat
+    ff ---> 
+    tt --> 1
 -/
+
+-- We can express f in Lean like this
+def f : bool → nat
+| ff := 0
+| tt := 1
+
+-- But if we try p the same way it's an error
+def p : bool → nat
+| tt := 1
 
 /-
-Zero. Zero is the smallest natural number.
-It is implemented by the zero constructor.
+While the totality of "functions" in Lean
+isn't obvious from the function type syntax
+(α → β), it becomes clear when you see what
+(α → β) really means.
 -/
 
-#eval nat.zero
+#check bool → ℕ           -- Function types
+#check Π (b : bool), nat  -- Are Pi types
+#check ∀ (n : bool), nat  -- ∀ means same thing
 
-/-
-Successor. The successor function takes a
-nat and yields a one-bigger nat. It is
-implemented by the succ constructor. This
-constructor takes a term of type nat as 
-an argument and constructs/returns a new
-term with one additional "succ" at its
-front.
+/- Function types in CL are Pi types
+
+A Pi type, (Π (a : α), β), is a 
+function type. As such, a value,
+f, of this type (aka a "function"
+in Lean) associates with *every* 
+value (a : α) a corresponding value, 
+(f a) : β. 
+
+A Π type is thus a kind of product
+type, in the sense that any value 
+("function") of this type implicitly
+specifies a set of pairs, (a, f a), 
+containing exactly such pair for 
+each and every value, (a : α). 
+
+You can also visualize a value of
+a Π type as attaching some value of
+type β to every value of type α, by
+means of a string, or "fiber." 
+  
+If you really get into this stuff, 
+you might even use "fibration" to 
+describe what a value of the type
+(Π (a : α), β) does with α.
+
+Finally, the especially curious
+student will ask, Why does a Π 
+type bind a name, here a, to the
+argument? What's wrong with just
+leaving it unnamed, as when using
+the notation, α → β? It's as if
+we'd written (a : α) → β. What's
+up with that?
+
+The answer is, it's useful when
+we want the *type* of the return
+value to depend on the value of 
+the argument, a! A Π type can
+express this idea. Consider an
+example:
+
+Π (n : ℕ), seq n
+
+This type represents the type 
+of function that takes a natural
+number n and returns a sequence
+of length n, *where the length
+of the sequence is part of its 
+type*.
+
+Welcome to the type theory of
+Lean in its full generality. We
+don't need "dependent types" at
+this point, but we will soon,
+so it's good idea to get a first
+glimpse at the idea here.
+
+For now, we need to get back
+to the option type and its use.
 -/
 
-#eval nat.succ nat.zero
+/- Examples of partial functions
 
-/-
-Predecessor. Here we define a truncated
-version of the predecessor function on
-natural numbers, defined mathematically
-by the following cases:
-    pred 0 = 0,
-    pred (n' + 1) = n'
--/
+Now suppose that we want to 
+represent a partial function, f, 
+from bool to nat, in Lean, where 
+f is define as follows:
 
-def pred : ℕ → ℕ
-| nat.zero := nat.zero
-| (nat.succ n') := n' 
+b  | f b
+ff |  0
+tt |  _
 
-#eval pred 0
-#eval pred 1
-#eval pred 5
 
-/-
-We can easily write a predicate function
-that returns true iff its argument is 
-zero.
--/
-def isZero : ℕ → bool
-| nat.zero := tt
-| _ := ff 
+While f has *some* value for ff, 
+it has *none* for tt. In the lexicon
+of everyday mathematics that makes
+it a *partial* function.
 
-/-
-Because larger values of type nat are
-constructed from smaller values of the
-same type, many functions that consume
-a nat argument will work by applying
-themselves recursively to smaller values
-of the same type.
+Here's another example: a partial
+function from nat → nat that's just
+like the identity function except
+it's defined only for even numbers.
 
-Here's an easy example. We can define
-a function, double, that takes a nat
-argument and returns double its value,
-recursively, like this:
+n  | f n 
+---| -----
+0  | 0
+1  | _
+2  | 2
+3  | _
+4  | 4
+5  | _
+&c | &c
 
-double 0 = 0
-double (1 + n') = 2 + double n'
--/
+ 
+Yet another is the square root where
+the *domain of definition* and the 
+*co-domain* are the real numbers, ℝ. 
 
-def double : ℕ → ℕ 
-| nat.zero := 0   -- 0 is nat.zero     
-| (nat.succ n') := 2 + double n'
+Here the function is partial because 
+the real-valued square root function 
+is not defined for every value in the 
+domain of definition, which includes
+the negative reals, on which the real
+square root function is undefined. 
 
-/-
-Weird detail: In this example, we 
-take advantage of Lean's notations
-for natural numbers. We can use the
-usual numerals (0 instead of nat.zero
-for example); and  Lean "de-sugars" 
-(n'+ 1) to nat.succ n', but this 
-trick doesn't work for 1 + n'.
--/
-
-/-
-Exercise. Implement the factorial
-function on natural numbers, defined
-by the following cases:
-    fac 0 := 1
-    fac (n' + 1) := fac (n' + 1) * fac n'
--/
-
--- Ans:
-
-def fac : ℕ → ℕ 
-| 0 := 1
-| (nat.succ n') := (nat.succ n') * fac n'
-
-/-
-Exercise: Define the n'th Fibonacci
-number by the following cases:
-  fib 0 = 1
-  fib 1 = 1
-  fib (n' + 2) = fib (n' +1) + fib n'
--/
-
--- Ans, now using some Lean notations
-
-def fib : ℕ → ℕ 
-| 0 := 1
-| 1 := 1
-| (n' + 2) := fib (n' + 1) + fib n'
-
-#eval fib 5
-
-/- 
-Exercise: On a piece of paper, draw
-the complete computation tree for fib
-5.
-
-                  fib 5
-                /      \
-              fib 4   fib 3
-            /     \    /\ ...
-          fib 3   fib 2
-        /     \    /\ ...
-      fib 2  fib 1
-     /     \  /\ ...
-   fib 1  fib 0
-    |       |
-    1       1
+Note that if we defined the domain
+of definition of a *similar* square
+root function to be the non-negative
+real numbers, then that function is
+total, because it's defined for every
+value of its domain of definition. 
 -/
 
 /-
-Addition:
+So let's talk about functions in the
+usual mathematical (set theoretical as
+opposed to type theoretical) sense? 
+What are the essential characteristics
+of a function, and how can we understand
+totality and partiality in these terms?
 
-0         + m = m
-(n' + 1)  + m = (n' + m) + 1
+A function in set theory, f, is defined
+by a triple, (α, β, R), where 
 
-Be sure you understand that!
+- α, a set, is the *domain of definition* of f 
+- β, a set, is the *co-domain* of f,  
+- R ⊆ α ⨯ β is a binary relation on α and β 
+
+By a binary relation on sets α and β we just
+mean a set of pairs (x, y) where x values 
+are in α and y values are in β.
+
+Example: our even identity function above
+is (ℕ, ℕ, {(0,0),(2,2),(4,4),etc.})
+
+The *domain* of f is the subset of values
+in the domain of definition on which f is
+defined. 
+
+The domain of definition of our even 
+identity function is the set of all 
+natural numbers, {0, 1, 2, 3, ...}, 
+but the *domain* of the funciton is
+just {0, 2, 4, etc.}, the even numbers. 
+
+dom f = { x ∈ α | ∃ y ∈ β, (x, y) ∈ R } 
+
+The *range* of f is the subset of all 
+values in the co-domain that are values 
+of (f x) for *some* element, x, in dom f.
+
+The codomain of our even identity function
+is the natural numbers but the range is
+just the set of even natural numbers.
+
+ran f = { y ∈ β | ∃ x ∈ α, (x, y ∈ R) }
 -/
 
-def add : ℕ → ℕ → ℕ 
-| 0        m :=   m 
-| (n' + 1) m := 1 + (add n' m) 
 
 
 /-
-EXERCISE: write a mathematical
-definition of multiplication of
-n by m, then implement it, using
-your add function if/as necessary
-to carry out addition.
+How can we represent mathematically
+partial functions in Lean (or other
+constructive logic proof assistant)
+when all "functions" must be total?
+
+Consider our partial function from
+bool to nat. First we represent 
+the domain of definition set, the
+booleans, as the inductive type, 
+bool. We will need to return *some* 
+value of some inductive type for
+each value (a : α): a value for tt
+and a value for ff. We *cannot* 
+specify *bool* as the return type,
+because then we'd be defining a
+total function. What we need is a
+new type that in a sense augments
+the bool type with on additional
+element that we can use to signal
+"undefined". That is the purpose
+of the polymorphic option type
+builder. It allows us to return
+either *some (b : β)* or *none*.
+We can then represent our partial
+function, f, from bool to nat, as 
+a total function, f', from bool to 
+*option nat*: one  tht returns 
+*none* when applied to a value, b, 
+on which f is not defined, and that 
+otherwise returns *some n*, where 
+n = (f b).
 -/
 
 /-
-EXERCISE: write a mathematical
-definition of exponentiation and
-implement it, using your definition
-of multiplication if/as necessary.
+See option.lean for its definition.
+It's defined there just as it is
+in the standard Lean libraries, so
+after these exercises you can use 
+it without having to define it for
+yourself.
 -/
+
+def pFun : bool → option ℕ 
+| tt := option.none
+| ff := option.some 0
+
+#reduce pFun tt
+#reduce pFun ff
+
+
+def evenId : ℕ → option ℕ :=
+λ n, 
+  if (n%2=0) 
+  then (option.some n) 
+  else option.none
+
+#reduce evenId 0
+#reduce evenId 1
+#reduce evenId 2
+#reduce evenId 3
+#reduce evenId 4
+#reduce evenId 5
+
+/-
+In Lean, we represent the sets, α and β,
+as types, and a total function, f, as a
+value of type Π (a : α), β, i.e., (α → β). 
+
+This type means for every (a : α) there 
+is a corresponding value, (f a) : β.  We 
+cannot represent a *partial* function, 
+(α, β, R) using a Π type on α and β. Our
+workaround for now is to represent such
+a function instead as a function of type 
+Π (a: α), option β, i.e., (α → option β)
+as we've described.
+-/
+
+
+end hidden
+

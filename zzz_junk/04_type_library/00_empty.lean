@@ -22,11 +22,4 @@ without returning any particular
 value of type nat.
 -/
 
-/-
-Lean's "match...with...end"
-function.
--/
-
-
-
 end hidden

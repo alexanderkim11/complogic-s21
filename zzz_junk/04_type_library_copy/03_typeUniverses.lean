@@ -4,14 +4,10 @@ Lean's type hierarchy
 
 namespace hidden1
 
-universe u
-
-structure box (α : Type u) : Type u :=
+structure box (α : Type) : Type :=
 (val : α)
 
-def b3 : box nat := box.mk 3
-
-def nope : box Type := box.mk nat
+def b3 : box nat := box.mk 3  
 
 /-
 Every term has a type. 
@@ -111,7 +107,7 @@ Why so complex? To avoids logical inconsistency.
 Russell's Paradox.
 
 Consider the set, S, of all sets that do not 
-contain themselves. Does S contain itself? 
+contain themselves. Does it contain itself? 
 
 If the answer is yes, then the answer must
 be no, and if it's no, it must be yes, so 
