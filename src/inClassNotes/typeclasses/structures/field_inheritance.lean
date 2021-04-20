@@ -1,6 +1,11 @@
+/-
+How to inherit field values from parent objects.
+-/
+
+
 @[class] 
 structure A (α : Type) := (n m : nat)
-instance a : A nat := ⟨ 1, 4 ⟩             -- anonymous constructor
+instance a : A nat := ⟨ 1, 4 ⟩              -- anonymous constructor
 instance a' : A nat := { m := 4, n := 1 }  -- alternative notation for objects
 #reduce a
 #reduce a'
