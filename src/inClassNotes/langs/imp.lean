@@ -96,15 +96,13 @@ def program : cmd := -- a1; a2; a3; a4
   X = [7];
   Y = [8];
   Z = [9];
-  X = [10];
-  skip
-
+  X = [10]
 
 
 def c_eval : cmd → a_state → a_state
 | skip st := st
 | (v = e) st  := override st v e
-| (c1 ; c2)st  := c_eval c2 (c_eval c1 st) 
+| (c1 ; c2) st  := c_eval c2 (c_eval c1 st) 
 
 /-
 We implement assignment using function override,
@@ -166,6 +164,7 @@ inductive c_sem : cmd → a_state → a_state → Prop
     apply rfl,
   end
 
+/-
 -- here we fix it
   theorem t2 : 
     ∀ (post : a_state), c_sem program init post → post X = 10 := 
@@ -176,10 +175,11 @@ inductive c_sem : cmd → a_state → a_state → Prop
     cases h,
     cases h_ᾰ_1,
     cases h_ᾰ,
-    cases h_ᾰ_ᾰ_1,
+    cases h_ᾰ_ᾰ_1,86/
     rw <- h_ᾰ_ᾰ_1_ᾰ,
     apply rfl,
   end
+  -/
 
 -- program broken because we added skip at end of "program"
 -- homework: you fix it
@@ -190,5 +190,115 @@ inductive c_sem : cmd → a_state → a_state → Prop
     assume h,
     unfold program at h,
     cases h,
-  _
+    cases h_ᾰ,
+    cases h_ᾰ_ᾰ_1,
+    cases h_ᾰ_1,
+    rw <- h_ᾰ_1_ᾰ,
+    rw <- h_ᾰ_ᾰ_1_ᾰ,
+    apply rfl,
   end
+
+  /-
+  SPECIFICATION AND VERIFICATION
+  -/
+
+  def Assertion := a_state → Prop
+
+  /-
+  Write an assertion that specifies the set of states in which X = 10
+  -/
+
+  def pre1 : Assertion := λ (st : a_state), st X = 10
+
+  /-
+  An assertion that's satisfied by any state
+  -/
+
+def any : Assertion := λ (st : a_state), true
+
+/-
+Pre: X = 10 or Y = 8
+-/
+
+def pre2 : Assertion := λ (st : a_state), st X = 10 ∨ st Y = 8
+
+
+def plus4 := λ (n : nat), 4 + n
+
+#eval plus4 7
+-- 4 + 7
+-- 11
+
+/-
+{X = 10, Y =2, Z = 9}
+{X = 3, Y = 8, Z = 0}  
+-/
+
+/-
+res : state -- {X = 10, Y = 8, Z = 9}
+-/
+
+/-
+pre2 res
+res X = 10 ∨ res Y = 8
+-/
+
+example : pre2 res := 
+begin
+  unfold pre2,
+  apply or.inr,
+  apply rfl,
+end
+
+/-
+What does it mean for a program, C,
+to satisfy a pre/post specification?
+-/
+
+-- remember: Assertion
+def satisfies (c : cmd) (pre post : Assertion) :=
+  ∀ (st st' : a_state),
+  pre st → 
+  c_sem c st st' → 
+  post st'
+
+notation pre {c} post := satisfies c pre post -- Hoare triple
+
+def prog2 := X = [10]
+
+lemma foo : satisfies prog2 any (λ st : a_state, st X = 10) :=
+begin
+  unfold satisfies,
+  assume st st',
+  assume trivial h,
+  unfold prog2 at h,
+  cases h,
+  rw <- h_ᾰ,
+  exact rfl,
+end
+
+example : ∀ (n m k : nat), m = n → k = m → n = k :=
+begin 
+  intros n m k,
+  assume h1 h2,
+  rw <- h1,
+  rw h2,
+end
+
+example : any { prog2 } (λ st' : a_state, st' X = 10 ∨ st' Y = 9) :=
+begin
+unfold satisfies, 
+-- COMPLETE THIS PROOF
+end
+
+
+
+
+example : any { prog2 } (λ st' : a_state, st' X = 10 ∨ st' Y = 9) :=
+begin
+  unfold satisfies,   -- remembering the definition of pre{c}post notation, ...
+  assume pre post h_any h_sem,
+  apply or.inr,
+  cases h_sem,
+  rw <- h_sem_ᾰ,
+end
